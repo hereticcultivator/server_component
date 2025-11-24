@@ -7,8 +7,8 @@ import org.apache.ibatis.annotations.*
 interface UserMapper {
     
     @Insert("""
-        INSERT INTO users (username, password, phone_number, full_name, role, created_at, updated_at)
-        VALUES (#{username}, #{password}, #{phoneNumber}, #{fullName}, #{role}, #{createdAt}, #{updatedAt})
+        INSERT INTO users (username, password, phone_number, full_name, role, created_at, updated_at, token_version)
+        VALUES (#{username}, #{password}, #{phoneNumber}, #{fullName}, #{role}, #{createdAt}, #{updatedAt}, #{tokenVersion})
     """)
     @Options(useGeneratedKeys = true, keyProperty = "id")
     fun insert(user: User): Int
@@ -50,5 +50,21 @@ interface UserMapper {
     
     @Delete("DELETE FROM users WHERE id = #{id}")
     fun deleteById(id: Long): Int
+    
+    @Update("""
+        UPDATE users 
+        SET token_version = token_version + 1,
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    """)
+    fun incrementTokenVersion(id: Long, updatedAt: Long): Int
+    
+    @Update("""
+        UPDATE users 
+        SET password = #{password},
+            updated_at = #{updatedAt}
+        WHERE id = #{id}
+    """)
+    fun updatePassword(id: Long, password: String, updatedAt: Long): Int
 }
 

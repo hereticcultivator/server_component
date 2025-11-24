@@ -17,7 +17,7 @@ class TestController {
     lateinit var databaseTestService: DatabaseTestService
 
     @GetMapping("/hello")
-    fun hello(): Result {
+    fun hello(): Result<Map<String, String>> {
         //测试全局异常
 //        val s = 1/0
         return Result.success(
@@ -25,17 +25,17 @@ class TestController {
                         "llj" to "hello"
                 )
         )
-//         return Result.error(msg = "错误")
+//         return Result.error(message = "错误")
     }
 
     @GetMapping("/admin")
-    fun admin(name: String): Result {
+    fun admin(name: String): Result<Any> {
         val admin = adminService.admin(name)
         return Result.success(data = admin)
     }
 
     @GetMapping("/db/test")
-    fun testDatabase(): Result {
+    fun testDatabase(): Result<Any> {
         val connectionInfo = databaseTestService.testConnection()
         return Result.success(data = connectionInfo)
     }

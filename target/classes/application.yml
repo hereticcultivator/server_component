@@ -12,6 +12,9 @@ spring:
       maximum-pool-size: 10
       minimum-idle: 5
       connection-timeout: 30000
+  # Jackson 配置（确保使用 snake_case）
+  jackson:
+    property-naming-strategy: SNAKE_CASE
 
 # MyBatis 配置
 mybatis:
@@ -23,3 +26,9 @@ mybatis:
   configuration:
     map-underscore-to-camel-case: true  # 开启驼峰命名转换
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl  # 打印 SQL（开发环境）
+
+# JWT Token 配置
+jwt:
+  secret: hahaha-your-secret-key-minimum-32-characters-long-for-security
+  access-token-expiration: 3600000  # AccessToken 有效期：1小时（毫秒）
+  refresh-token-expiration: 604800000  # RefreshToken 有效期：7天（毫秒）

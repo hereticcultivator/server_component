@@ -1,7 +1,7 @@
 package com.comeon.component.model
 
 data class User(
-    val id: Long? = null,
+    var id: Long? = null,
     val username: String,
     val password: String,
     val phoneNumber: String,
@@ -9,7 +9,8 @@ data class User(
     val role: Int = 0,  // 0=USER, 1=ADMIN
     val createdAt: Long = System.currentTimeMillis(),  // 时间戳（毫秒）
     val updatedAt: Long = System.currentTimeMillis(),
-    val lastLoginAt: Long? = null
+    val lastLoginAt: Long? = null,
+    val tokenVersion: Int = 0  // Token版本号，用于RefreshToken轮换
 )
 
 // 角色常量

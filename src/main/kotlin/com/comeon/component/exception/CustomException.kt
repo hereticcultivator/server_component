@@ -1,3 +1,3 @@
 package com.comeon.component.exception
 
-class CustomException(val msg: String, val code: String = "500") : RuntimeException() {}
+class CustomException(override val message: String, val code: Int = 500) : RuntimeException(message)

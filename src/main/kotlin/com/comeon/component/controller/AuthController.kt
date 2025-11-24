@@ -1,14 +1,12 @@
 package com.comeon.component.controller
 
 import com.comeon.component.common.Result
-import com.comeon.component.dto.AuthResponse
-import com.comeon.component.dto.BindPhoneRequest
-import com.comeon.component.dto.PhoneLoginRequest
-import com.comeon.component.dto.UserRegistrationRequest
-import com.comeon.component.dto.UsernameLoginRequest
+import com.comeon.component.dto.*
 import com.comeon.component.service.AuthService
 import com.comeon.component.service.UserService
 import jakarta.annotation.Resource
+import jakarta.servlet.http.HttpServletRequest
+import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
@@ -32,43 +30,75 @@ class AuthController {
      * POST /api/auth/register
      */
     @PostMapping("/register")
-    fun register(@RequestBody request: UserRegistrationRequest): ResponseEntity<Result> {
-        val authResponse = authService.register(request)
+    fun register(
+        @Valid @RequestBody request: UserRegistrationRequest,
+        httpRequest: HttpServletRequest
+    ): ResponseEntity<Result<AuthResponse>> {
+        val authResponse = authService.register(request, httpRequest)
         return ResponseEntity.status(HttpStatus.CREATED)
-            .body(Result.success(data = authResponse, msg = "注册成功"))
+            .body(Result.success(data = authResponse, message = "注册成功"))
     }
     
     /**
-     * 账号密码登录
-     * POST /api/auth/login/username
+     * 统一登录接口（方案A）
+     * POST /api/auth/login
+     * 支持多种登录方式：phone_code, phone_password, username_password
+     * 支持自动注册（仅手机号登录方式）
      */
-    @PostMapping("/login/username")
-    fun loginByUsername(@RequestBody request: UsernameLoginRequest): ResponseEntity<Result> {
-        val authResponse = authService.loginByUsername(request)
-        return ResponseEntity.ok(Result.success(data = authResponse, msg = "登录成功"))
+    @PostMapping("/login")
+    fun unifiedLogin(
+        @Valid @RequestBody request: UnifiedLoginRequest,
+        httpRequest: HttpServletRequest
+    ): ResponseEntity<Result<AuthResponse>> {
+        val authResponse = authService.unifiedLogin(request, httpRequest)
+        val message = if (authResponse.isNewUser) "注册并登录成功" else "登录成功"
+        return ResponseEntity.ok(Result.success(data = authResponse, message = message))
     }
     
     /**
-     * 手机号登录
-     * POST /api/auth/login/phone
+     * 发送验证码（登录/注册通用）
+     * POST /api/auth/send-code
      */
-    @PostMapping("/login/phone")
-    fun loginByPhone(@RequestBody request: PhoneLoginRequest): ResponseEntity<Result> {
-        val authResponse = authService.loginByPhone(request)
-        return ResponseEntity.ok(Result.success(data = authResponse, msg = "登录成功"))
+    @PostMapping("/send-code")
+    fun sendCode(
+        @Valid @RequestBody request: SendCodeRequest
+    ): ResponseEntity<Result<Nothing>> {
+        authService.sendCode(request.phoneNumber, request.purpose)
+        return ResponseEntity.ok(Result.success(message = "验证码已发送"))
     }
     
     /**
-     * 绑定手机号
-     * POST /api/auth/bind-phone
+     * 刷新Token
+     * POST /api/auth/refresh
      */
-    @PostMapping("/bind-phone")
-    fun bindPhone(
-        @RequestParam userId: Long,
-        @RequestBody request: BindPhoneRequest
-    ): ResponseEntity<Result> {
-        val userResponse = userService.bindPhoneNumber(userId, request.phoneNumber)
-        return ResponseEntity.ok(Result.success(data = userResponse, msg = "绑定手机号成功"))
+    @PostMapping("/refresh")
+    fun refreshToken(@RequestBody request: RefreshTokenRequest): ResponseEntity<Result<RefreshTokenResponse>> {
+        val refreshResponse = authService.refreshToken(request.refreshToken)
+        return ResponseEntity.ok(Result.success(data = refreshResponse, message = "刷新成功"))
+    }
+    
+    /**
+     * 发送密码重置验证码
+     * POST /api/auth/password-reset/send-code
+     */
+    @PostMapping("/password-reset/send-code")
+    fun sendPasswordResetCode(
+        @Valid @RequestBody request: PasswordResetCodeRequest
+    ): ResponseEntity<Result<Nothing>> {
+        authService.sendPasswordResetCode(request.phoneNumber)
+        return ResponseEntity.ok(Result.success(message = "验证码已发送"))
+    }
+    
+    /**
+     * 重置密码
+     * POST /api/auth/password-reset
+     */
+    @PostMapping("/password-reset")
+    fun resetPassword(
+        @Valid @RequestBody request: PasswordResetRequest
+    ): ResponseEntity<Result<Nothing>> {
+        authService.resetPassword(request)
+        return ResponseEntity.ok(Result.success(message = "密码重置成功"))
     }
 }
 
