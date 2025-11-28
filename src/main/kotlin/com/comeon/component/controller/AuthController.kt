@@ -26,24 +26,11 @@ class AuthController {
     lateinit var userService: UserService
     
     /**
-     * 用户注册
-     * POST /api/auth/register
-     */
-    @PostMapping("/register")
-    fun register(
-        @Valid @RequestBody request: UserRegistrationRequest,
-        httpRequest: HttpServletRequest
-    ): ResponseEntity<Result<AuthResponse>> {
-        val authResponse = authService.register(request, httpRequest)
-        return ResponseEntity.status(HttpStatus.CREATED)
-            .body(Result.success(data = authResponse, message = "注册成功"))
-    }
-    
-    /**
-     * 统一登录接口（方案A）
+     * 统一登录接口
      * POST /api/auth/login
      * 支持多种登录方式：phone_code, phone_password, username_password
      * 支持自动注册（仅手机号登录方式）
+     * 注意：注册功能已集成到登录接口中，通过自动注册实现
      */
     @PostMapping("/login")
     fun unifiedLogin(

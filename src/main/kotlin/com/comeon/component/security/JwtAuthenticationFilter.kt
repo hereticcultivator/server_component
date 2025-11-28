@@ -30,10 +30,12 @@ class JwtAuthenticationFilter(
      * 白名单路径（不需要token验证的路径）
      */
     private val publicPaths = listOf(
-        "/api/auth/register",
         "/api/auth/login",
+        "/api/auth/send-code",
         "/api/auth/refresh",
-        "/api/test"
+        "/api/auth/password-reset",
+        "/api/test",
+        "/api/v1/game/hungry/tags"  // 获取标签接口公开
     )
     
     override fun doFilterInternal(

@@ -22,16 +22,58 @@
 
 ### 1. 用户登录/注册
 
-#### 请求示例
+系统提供统一登录接口，支持三种登录方式：
+
+#### 1.1 用户名密码登录
 
 ```bash
-# 用户名密码登录
-POST /api/auth/login/username
+POST /api/auth/login
 Content-Type: application/json
 
 {
+  "loginType": "username_password",
   "username": "testuser",
-  "password": "123456"
+  "password": "12345678"
+}
+```
+
+#### 1.2 手机号密码登录（支持自动注册）
+
+```bash
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "loginType": "phone_password",
+  "phoneNumber": "13800138000",
+  "password": "12345678",
+  "autoRegister": true,
+  "fullName": "测试用户"
+}
+```
+
+#### 1.3 手机号验证码登录（支持自动注册）
+
+```bash
+# 步骤1：发送验证码
+POST /api/auth/send-code
+Content-Type: application/json
+
+{
+  "phoneNumber": "13800138000",
+  "purpose": "login"
+}
+
+# 步骤2：使用验证码登录
+POST /api/auth/login
+Content-Type: application/json
+
+{
+  "loginType": "phone_code",
+  "phoneNumber": "13800138000",
+  "verificationCode": "123456",
+  "autoRegister": true,
+  "fullName": "测试用户"
 }
 ```
 
@@ -39,31 +81,80 @@ Content-Type: application/json
 
 ```json
 {
-  "code": "200",
+  "code": 200,
+  "message": "登录成功",
   "data": {
     "user": {
       "id": 1,
       "username": "testuser",
-      "phoneNumber": "13800138000",
-      "fullName": "测试用户",
+      "phone_number": "13800138000",
+      "full_name": "测试用户",
       "role": 0,
-      "createdAt": 1704067200000,
-      "lastLoginAt": 1704067300000
+      "created_at": 1704067200000,
+      "last_login_at": 1704067300000
     },
-    "accessToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsInJvbGUiOjAsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3MDQwNjczMDAsImV4cCI6MTcwNDA3MDkwMH0...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwidHlwZSI6InJlZnJlc2giLCJpYXQiOjE3MDQwNjczMDAsImV4cCI6MTcwNDY3MjEwMH0..."
+    "tokens": {
+      "access_token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwidXNlcm5hbWUiOiJ0ZXN0dXNlciIsInJvbGUiOjAsInR5cGUiOiJhY2Nlc3MiLCJpYXQiOjE3MDQwNjczMDAsImV4cCI6MTcwNDA3MDkwMH0...",
+      "refresh_token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIiwidHlwZSI6InJlZnJlc2giLCJpYXQiOjE3MDQwNjczMDAsImV4cCI6MTcwNDY3MjEwMH0..."
+    },
+    "is_new_user": false
   },
-  "msg": "登录成功"
+  "success": true,
+  "timestamp": 1704067300000
 }
 ```
+
+**注意**：
+- 自动注册时，`is_new_user` 为 `true`，消息为 "注册并登录成功"
+- 所有登录方式都会返回Token对（access_token + refresh_token）
+- 所有响应字段使用 snake_case 格式
 
 #### 客户端处理
 
 ```javascript
 // 存储token
-const response = await login(username, password);
-localStorage.setItem('accessToken', response.data.accessToken);
-localStorage.setItem('refreshToken', response.data.refreshToken);
+const response = await login(loginType, credentials);
+localStorage.setItem('accessToken', response.data.tokens.access_token);
+localStorage.setItem('refreshToken', response.data.tokens.refresh_token);
+
+// 示例：用户名密码登录
+async function loginByUsername(username, password) {
+  const response = await fetch('http://localhost:9999/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      loginType: 'username_password',
+      username: username,
+      password: password
+    })
+  });
+  const data = await response.json();
+  if (data.code === 200) {
+    localStorage.setItem('accessToken', data.data.tokens.access_token);
+    localStorage.setItem('refreshToken', data.data.tokens.refresh_token);
+  }
+  return data;
+}
+
+// 示例：手机号验证码登录
+async function loginByPhoneCode(phoneNumber, verificationCode) {
+  const response = await fetch('http://localhost:9999/api/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      loginType: 'phone_code',
+      phoneNumber: phoneNumber,
+      verificationCode: verificationCode,
+      autoRegister: true
+    })
+  });
+  const data = await response.json();
+  if (data.code === 200) {
+    localStorage.setItem('accessToken', data.data.tokens.access_token);
+    localStorage.setItem('refreshToken', data.data.tokens.refresh_token);
+  }
+  return data;
+}
 ```
 
 ### 2. 访问受保护的API
@@ -87,13 +178,19 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
 
 ```json
 {
-  "code": "200",
+  "code": 200,
+  "message": "success",
   "data": {
     "id": 1,
     "username": "testuser",
-    ...
+    "phone_number": "13800138000",
+    "full_name": "测试用户",
+    "role": 0,
+    "created_at": 1704067200000,
+    "last_login_at": 1704067300000
   },
-  "msg": "success"
+  "success": true,
+  "timestamp": 1704067300000
 }
 ```
 
@@ -101,9 +198,11 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiJ9...
 
 ```json
 {
-  "code": "401",
+  "code": 401,
+  "message": "Token已过期",
   "data": null,
-  "msg": "Token已过期"
+  "success": false,
+  "timestamp": 1704067300000
 }
 ```
 
@@ -126,12 +225,16 @@ Content-Type: application/json
 
 ```json
 {
-  "code": "200",
+  "code": 200,
+  "message": "刷新成功",
   "data": {
-    "accessToken": "eyJhbGciOiJIUzI1NiJ9...新token",
-    "refreshToken": "eyJhbGciOiJIUzI1NiJ9...新token"
+    "tokens": {
+      "access_token": "eyJhbGciOiJIUzI1NiJ9...新token",
+      "refresh_token": "eyJhbGciOiJIUzI1NiJ9...新token"
+    }
   },
-  "msg": "刷新成功"
+  "success": true,
+  "timestamp": 1704067300000
 }
 ```
 
@@ -139,9 +242,11 @@ Content-Type: application/json
 
 ```json
 {
-  "code": "401",
+  "code": 401,
+  "message": "Token已过期",
   "data": null,
-  "msg": "Token已过期"
+  "success": false,
+  "timestamp": 1704067300000
 }
 ```
 
@@ -200,11 +305,11 @@ apiClient.interceptors.response.use(
           { refreshToken }
         );
 
-        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+        const { access_token, refresh_token } = response.data.data.tokens;
 
         // 更新token
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', newRefreshToken);
+        localStorage.setItem('accessToken', access_token);
+        localStorage.setItem('refreshToken', refresh_token);
 
         // 重试原请求
         originalRequest.headers.Authorization = `Bearer ${accessToken}`;
@@ -223,18 +328,42 @@ apiClient.interceptors.response.use(
 );
 
 // 使用示例
-export const login = async (username, password) => {
-  const response = await apiClient.post('/auth/login/username', {
-    username,
-    password
+export const login = async (loginType, credentials) => {
+  const response = await apiClient.post('/auth/login', {
+    loginType,
+    ...credentials
   });
   
   // 存储token
-  if (response.data.data.accessToken) {
-    localStorage.setItem('accessToken', response.data.data.accessToken);
-    localStorage.setItem('refreshToken', response.data.data.refreshToken);
+  if (response.data.data.tokens) {
+    localStorage.setItem('accessToken', response.data.data.tokens.access_token);
+    localStorage.setItem('refreshToken', response.data.data.tokens.refresh_token);
   }
   
+  return response.data;
+};
+
+// 示例：用户名密码登录
+export const loginByUsername = async (username, password) => {
+  return login('username_password', { username, password });
+};
+
+// 示例：手机号密码登录
+export const loginByPhonePassword = async (phoneNumber, password) => {
+  return login('phone_password', { phoneNumber, password, autoRegister: true });
+};
+
+// 示例：手机号验证码登录
+export const loginByPhoneCode = async (phoneNumber, verificationCode) => {
+  return login('phone_code', { phoneNumber, verificationCode, autoRegister: true });
+};
+
+// 发送验证码
+export const sendCode = async (phoneNumber, purpose = 'login') => {
+  const response = await apiClient.post('/auth/send-code', {
+    phoneNumber,
+    purpose
+  });
   return response.data;
 };
 
@@ -462,8 +591,8 @@ class TokenRequestAdapter: RequestInterceptor {
                 switch response.result {
                 case .success(let data):
                     TokenManager.shared.saveTokens(
-                        access: data.data.accessToken,
-                        refresh: data.data.refreshToken
+                        access: data.data.tokens.access_token,
+                        refresh: data.data.tokens.refresh_token
                     )
                     completion(true)
                 case .failure:
@@ -490,9 +619,11 @@ class TokenRequestAdapter: RequestInterceptor {
 
 ```json
 {
-  "code": "401",
+  "code": 401,
+  "message": "Token已过期",
   "data": null,
-  "msg": "Token已过期"
+  "success": false,
+  "timestamp": 1704067300000
 }
 ```
 
@@ -520,11 +651,14 @@ class TokenRequestAdapter: RequestInterceptor {
 
 ### 公开接口（不需要Token）
 
-- `POST /api/auth/register` - 用户注册
-- `POST /api/auth/login/username` - 用户名登录
-- `POST /api/auth/login/phone` - 手机号登录
+- `POST /api/auth/login` - 统一登录接口（支持三种登录方式，支持自动注册）
+- `POST /api/auth/send-code` - 发送验证码
 - `POST /api/auth/refresh` - 刷新Token
+- `POST /api/auth/password-reset/send-code` - 发送密码重置验证码
+- `POST /api/auth/password-reset` - 重置密码
 - `GET /api/test/**` - 测试接口
+
+**注意**：注册功能已集成到统一登录接口中，通过自动注册实现，无需单独的注册接口。
 
 ### 受保护接口（需要Token）
 
@@ -575,4 +709,5 @@ A: 客户端登出时清除本地存储的Token即可。服务端可以考虑实
 ## 技术支持
 
 如有问题，请联系开发团队或查看服务端API文档。
+
 

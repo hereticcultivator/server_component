@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseBody
 import kotlin.Exception
 
-@ControllerAdvice("com.comeon.component.controller")
+@ControllerAdvice(basePackages = ["com.comeon.component"])
 class GlobalExceptionHandler {
 
     private val logger = LoggerFactory.getLogger(GlobalExceptionHandler::class.java)

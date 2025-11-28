@@ -34,11 +34,12 @@ class SecurityConfig(
                 auth
                     // 公开接口（不需要认证）
                     .requestMatchers(
-                        "/api/auth/register",
-                        "/api/auth/login/**",
+                        "/api/auth/login",
+                        "/api/auth/send-code",
                         "/api/auth/refresh",
                         "/api/auth/password-reset/**",
-                        "/api/test/**"
+                        "/api/test/**",
+                        "/api/v1/game/hungry/tags"  // 获取标签接口公开
                     ).permitAll()
                     // 其他所有接口需要认证
                     .anyRequest().authenticated()

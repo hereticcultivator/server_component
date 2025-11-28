@@ -275,37 +275,6 @@ class UserService(
         userMapper.updateLastLogin(updatedUser)
     }
     
-    fun bindPhoneNumber(userId: Long, phoneNumber: String): UserResponse {
-        // 校验手机号不能为空
-        if (phoneNumber.isBlank()) {
-            throw CustomException("手机号不能为空", 400)
-        }
-        
-        // 校验手机号位数（11位）
-        if (phoneNumber.length != 11) {
-            throw CustomException("手机号必须是11位数字", 400)
-        }
-        
-        // 检查手机号是否已被其他用户使用
-        val existingUser = userMapper.findByPhoneNumber(phoneNumber)
-        if (existingUser != null && existingUser.id != userId) {
-            throw CustomException("手机号已被其他用户使用", 400)
-        }
-        
-        // 获取用户信息
-        val user = userMapper.findById(userId)
-            ?: throw CustomException("用户不存在", 404)
-        
-        // 更新手机号
-        val updatedUser = user.copy(
-            phoneNumber = phoneNumber,
-            updatedAt = System.currentTimeMillis()
-        )
-        
-        userMapper.update(updatedUser)
-        return updatedUser.toResponse()
-    }
-    
     fun updateUser(id: Long, request: UserUpdateRequest): UserResponse {
         val user = userMapper.findById(id)
             ?: throw CustomException("用户不存在", 404)

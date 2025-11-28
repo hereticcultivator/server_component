@@ -66,19 +66,6 @@ class UserController {
     }
     
     /**
-     * 绑定手机号
-     * 使用 @CurrentUser 注解获取当前用户ID，确保用户只能绑定自己的手机号
-     */
-    @PostMapping("/bind-phone")
-    fun bindPhone(
-        @CurrentUser userId: Long,
-        @Valid @RequestBody request: BindPhoneRequest
-    ): ResponseEntity<Result<UserResponse>> {
-        val userResponse = userService.bindPhoneNumber(userId, request.phoneNumber)
-        return ResponseEntity.ok(Result.success(data = userResponse, message = "绑定手机号成功"))
-    }
-    
-    /**
      * 使用 SecurityContextHelper 手动获取用户信息的示例
      * 这种方式适用于需要更灵活控制的场景
      */

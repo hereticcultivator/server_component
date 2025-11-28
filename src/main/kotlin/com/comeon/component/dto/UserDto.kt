@@ -60,13 +60,6 @@ data class RefreshTokenResponse(
     val tokens: TokenInfo  // 使用统一的token结构
 )
 
-// 绑定手机号请求
-data class BindPhoneRequest(
-    @field:NotBlank(message = "手机号不能为空")
-    @field:Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
-    val phoneNumber: String
-)
-
 // 发送密码重置验证码请求
 data class PasswordResetCodeRequest(
     @field:NotBlank(message = "手机号不能为空")
