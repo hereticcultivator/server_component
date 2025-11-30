@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at BIGINT NOT NULL COMMENT '创建时间戳（毫秒）',
     updated_at BIGINT NOT NULL COMMENT '更新时间戳（毫秒）',
     last_login_at BIGINT COMMENT '最后登录时间戳（毫秒）',
+    token_version INT NOT NULL DEFAULT 0 COMMENT 'Token版本号，用于RefreshToken轮换',
     INDEX idx_username (username),
     INDEX idx_phone_number (phone_number),
     INDEX idx_role (role),
