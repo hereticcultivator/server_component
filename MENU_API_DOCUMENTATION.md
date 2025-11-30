@@ -521,9 +521,85 @@ Content-Type: application/json
 
 ---
 
-## 3. 数据模型
+## 3. 分享解析接口
 
-### 3.1 MenuResponse（菜单响应）
+### 3.1 解析分享链接
+
+**接口地址**: `POST /parse/share`
+
+**认证要求**: ❌ 不需要认证（公开接口）
+
+**功能说明**: 
+解析各大外卖及电商平台（美团、饿了么、京东、淘宝、大众点评）的分享文案，自动处理短链重定向，提取关键信息并返回客户端可执行的跳转指令列表。
+
+**请求体**:
+```json
+{
+  "text": "【美团外卖】猪八戒烤鸭... http://dpurl.cn/..."
+}
+```
+
+**字段说明**:
+| 字段名 | 类型 | 必填 | 说明 |
+|--------|------|------|------|
+| text | string | 是 | 包含链接的分享文本 |
+
+**请求示例**:
+```http
+POST /api/v1/game/hungry/parse/share
+Content-Type: application/json
+
+{
+  "text": "【美团外卖】猪八戒烤鸭... http://dpurl.cn/..."
+}
+```
+
+**响应示例**:
+```json
+{
+  "code": 200,
+  "message": "success",
+  "data": {
+    "meta": {
+      "title": "解析成功",
+      "desc": "检测到【美团外卖】店铺：猪八戒烤鸭\n建议跳转。",
+      "icon": null,
+      "platform": "MEITUAN" // 枚举: MEITUAN, ELEME, JINGDONG, TAOBAO, DIANPING, UNKNOWN
+    },
+    "actions": [
+      {
+        "type": "SCHEME", // 动作类型: SCHEME, WEB, TOAST
+        "packageName": "com.sankuai.meituan",
+        "uri": "imeituan://www.meituan.com/search?q=猪八戒烤鸭",
+        "intentFlags": ["NEW_TASK"]
+      }
+    ]
+  },
+  "success": true,
+  "timestamp": 1678888888000
+}
+```
+
+**平台策略说明**:
+
+| 平台 | 标识 | 策略说明 |
+|------|------|----------|
+| 美团外卖 | MEITUAN | 使用 `imeituan://` 搜索协议跳转 |
+| 京东 | JINGDONG | 优先识别小程序协议 (`openapp.jdmobile://`)，支持复杂参数解析 |
+| 淘宝 | TAOBAO | 依次尝试：ShopID跳转 -> ItemID跳转 -> HTTPS直连 (App Link) -> Scheme降级 (`taobao://`) |
+| 大众点评 | DIANPING | 使用 `dianping://` 搜索协议跳转 |
+| 饿了么 | ELEME | 暂未实现特殊跳转，回退到 Web |
+
+**说明**: 
+- 接口会自动处理短链重定向以获取真实 URL
+- 模拟移动端 User-Agent 以获取正确的页面内容
+- 优先从分享文本中提取店名（如「...」格式），其次尝试从网页标题提取
+
+---
+
+## 4. 数据模型
+
+### 4.1 MenuResponse（菜单响应）
 
 ```json
 {
@@ -543,7 +619,7 @@ Content-Type: application/json
 }
 ```
 
-### 3.2 TagResponse（标签响应）
+### 4.2 TagResponse（标签响应）
 
 ```json
 {
@@ -553,7 +629,28 @@ Content-Type: application/json
 }
 ```
 
-### 3.3 PageResponse（分页响应）
+### 4.3 ParseResult（解析结果）
+
+```json
+{
+  "meta": {
+    "title": "string",
+    "desc": "string",
+    "icon": "string",
+    "platform": "string" // MEITUAN, ELEME, JINGDONG, TAOBAO, DIANPING, UNKNOWN
+  },
+  "actions": [
+    {
+      "type": "string",  // SCHEME, WEB, TOAST
+      "packageName": "string",
+      "uri": "string",
+      "intentFlags": ["string"]
+    }
+  ]
+}
+```
+
+### 4.4 PageResponse（分页响应）
 
 ```json
 {
@@ -570,9 +667,9 @@ Content-Type: application/json
 
 ---
 
-## 4. 数据权限说明
+## 5. 数据权限说明
 
-### 4.1 菜单权限
+### 5.1 菜单权限
 
 - **拥有者** (`is_owner = 1`): 可以查看、编辑、删除菜单
 - **分享用户** (`is_owner = 0`): 
@@ -580,12 +677,12 @@ Content-Type: application/json
   - `permission = 'read'`: 只能查看菜单
 - **管理员**: 可以查看、编辑、删除所有菜单
 
-### 4.2 查询过滤
+### 5.2 查询过滤
 
 - **普通用户**：只能查询到自己有权限访问的菜单（通过 `user_menus` 关联表过滤）
 - **管理员**：可以查询所有菜单
 
-### 4.3 操作权限
+### 5.3 操作权限
 
 | 操作 | 拥有者 | 分享用户(write) | 分享用户(read) | 管理员 |
 |------|--------|----------------|----------------|--------|
@@ -597,7 +694,7 @@ Content-Type: application/json
 
 ---
 
-## 5. 错误码说明
+## 6. 错误码说明
 
 | 错误码 | 说明 | 示例 |
 |--------|------|------|
@@ -621,7 +718,7 @@ Content-Type: application/json
 
 ---
 
-## 6. 注意事项
+## 7. 注意事项
 
 1. **时间戳格式**：所有时间戳均为毫秒级Unix时间戳
 2. **ID格式**：
@@ -634,14 +731,15 @@ Content-Type: application/json
    - 菜单管理接口：需要JWT Token
    - 标签获取接口：不需要认证（公开）
    - 标签创建接口：不需要认证（公开）
+   - 分享解析接口：不需要认证（公开）
 6. **数据隔离**：菜单是共享的，但通过 `user_menus` 关联表实现用户维度的数据隔离
 7. **未来扩展**：未来分享功能可以通过在 `user_menus` 表中添加记录实现
 
 ---
 
-## 7. 数据库设计说明
+## 8. 数据库设计说明
 
-### 7.1 表结构
+### 8.1 表结构
 
 - **menus**: 菜单共享表，存储菜单基本信息
 - **user_menus**: 用户菜单关联表，记录用户拥有的菜单及权限
@@ -649,101 +747,27 @@ Content-Type: application/json
 - **menu_tags**: 菜单标签关联表
 - **menu_operation_logs**: 菜单操作日志表
 
-### 7.2 关联关系
+### 8.2 关联关系
 
 - 一个菜单可以被多个用户拥有（通过 `user_menus` 表）
 - 一个用户可以拥有多个菜单
 - 一个菜单可以有多个标签（通过 `menu_tags` 表）
 - 一个标签可以关联多个菜单
 
-### 7.3 未来扩展
+### 8.3 未来扩展
 
 - **分享功能**：在 `user_menus` 表中添加记录，设置 `is_owner = 0` 和相应的 `permission`
 - **分享码功能**：可以添加 `menu_shares` 表存储分享码和分享关系
 
 ---
 
-## 8. Retrofit 客户端示例
-
-### 8.1 接口定义（Kotlin）
-
-```kotlin
-interface MenuApiService {
-    // 获取菜单列表
-    @GET("/game/hungry/menus")
-    suspend fun getMenuList(
-        @Query("page") page: Int = 0,
-        @Query("size") size: Int = 20,
-        @Query("category") category: Int? = null,
-        @Query("q") keyword: String? = null
-    ): Result<PageResponse<MenuResponse>>
-    
-    // 获取菜单详情
-    @GET("/game/hungry/menus/{id}")
-    suspend fun getMenuById(@Path("id") id: String): Result<MenuResponse>
-    
-    // 创建菜单
-    @POST("/game/hungry/menus")
-    suspend fun createMenu(@Body request: MenuCreateRequest): Result<MenuResponse>
-    
-    // 更新菜单
-    @PUT("/game/hungry/menus/{id}")
-    suspend fun updateMenu(
-        @Path("id") id: String,
-        @Body request: MenuUpdateRequest
-    ): Result<MenuResponse>
-    
-    // 批量删除菜单
-    @DELETE("/game/hungry/menus")
-    suspend fun deleteMenus(@Body request: MenuDeleteRequest): Result<DeleteResponse>
-    
-    // 复制菜单
-    @POST("/game/hungry/menus/{id}/copy")
-    suspend fun copyMenu(@Path("id") id: String): Result<MenuResponse>
-    
-    // 获取所有标签
-    @GET("/game/hungry/tags")
-    suspend fun getAllTags(): Result<List<TagResponse>>
-    
-    // 创建自定义标签
-    @POST("/game/hungry/tags")
-    suspend fun createTag(@Body request: TagCreateRequest): Result<TagResponse>
-}
-```
-
-### 8.2 数据类定义（Kotlin）
-
-```kotlin
-// 注意：使用 @SerializedName 处理 snake_case 转换
-data class MenuResponse(
-    @SerializedName("id") val id: String,
-    @SerializedName("title") val title: String,
-    @SerializedName("category") val category: Int,
-    @SerializedName("icon_url") val iconUrl: String?,
-    @SerializedName("extra_info") val extraInfo: String?,
-    @SerializedName("tags") val tags: List<TagResponse>,
-    @SerializedName("create_time") val createTime: Long
-)
-
-data class TagResponse(
-    @SerializedName("id") val id: String,
-    @SerializedName("name") val name: String,
-    @SerializedName("type") val type: String
-)
-
-data class MenuCreateRequest(
-    val title: String,
-    val category: Int = 0,
-    @SerializedName("icon_url") val iconUrl: String? = null,
-    @SerializedName("extra_info") val extraInfo: String? = null,
-    @SerializedName("tag_ids") val tagIds: List<String> = emptyList()
-)
-```
-
----
-
 ## 9. 更新日志
 
+- **2025-11-30**:
+  - 新增分享链接解析接口 (`/parse/share`)
+  - 添加 `ParseResult` 等数据模型定义
+  - 移除客户端示例，仅保留服务端文档
+  - 更新解析策略，支持 DIANPING 及更完善的京东/淘宝跳转逻辑
 - **2025-11-28**: 
   - 初始版本
   - 支持菜单的CRUD操作

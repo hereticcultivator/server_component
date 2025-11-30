@@ -39,7 +39,8 @@ class SecurityConfig(
                         "/api/auth/refresh",
                         "/api/auth/password-reset/**",
                         "/api/test/**",
-                        "/api/v1/game/hungry/tags"  // 获取标签接口公开
+                        "/api/v1/game/hungry/tags",  // 获取标签接口公开
+                        "/api/v1/game/hungry/parse/**" // 分享解析接口公开
                     ).permitAll()
                     // 其他所有接口需要认证
                     .anyRequest().authenticated()
